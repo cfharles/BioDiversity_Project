@@ -37,16 +37,22 @@ Each yearly time step applies three operations in sequence:
 ### Lotka-Volterra Competition (per cell, per year)
 
 **Without biomat:**
-```
-N(t+1) = N(t) + rN · N(t) · (1 − (N(t) + α_NI · I(t)) / KN) · dt
-I(t+1) = I(t) + rI · I(t) · (1 − (I(t) + α_IN · N(t)) / KI) · dt
-```
+$$
+N_{t+1} = N_t + r_N N_t \left(1 - \frac{N_t + \alpha_{NI} I_t}{K_N}\right) dt
+$$
+
+$$
+I_{t+1} = I_t + r_I I_t \left(1 - \frac{I_t + \alpha_{IN} N_t}{K_I}\right) dt
+$$
 
 **With active biomat (years 0–3 post-deployment):**
-```
-N(t+1) = N(t) + (rN × boost) · N(t) · (1 − (N(t) + α_NI_reduced · I(t)) / KN) · dt
-I(t+1) = I(t) + rI · I(t) · (1 − (I(t) + α_IN · N(t)) / KI) · dt − suppression
-```
+$$
+N_{t+1} = N_t + (r_N \cdot \mathrm{boost}) N_t \left(1 - \frac{N_t + \alpha_{NI,\mathrm{reduced}} I_t}{K_N}\right) dt
+$$
+
+$$
+I_{t+1} = I_t + r_I I_t \left(1 - \frac{I_t + \alpha_{IN} N_t}{K_I}\right) dt - \mathrm{suppression}
+$$
 
 Where:
 - `rN`, `rI` = intrinsic growth rates
@@ -56,17 +62,23 @@ Where:
 
 ### Physical Validity Constraint
 After each update, cells where `N + I > 1` are rescaled proportionally:
-```
-N ← N / (N + I)
-I ← I / (N + I)
-```
+$$
+N \leftarrow \frac{N}{N + I}
+$$
+
+$$
+I \leftarrow \frac{I}{N + I}
+$$
 This preserves the competitive ratio between species while enforcing total coverage limits.
 
 ### Seed Dispersal (per year)
-```
-invasive_increment = spread_rate_I · neighbourhood_avg(I) · (1 − I) · noise
-native_increment   = spread_rate_N · neighbourhood_avg(N) · (1 − N) · noise
-```
+$$
+\mathrm{invasive\_increment} = \mathrm{spread\_rate}_I \cdot \mathrm{neighbourhood\_avg}(I) \cdot (1 - I) \cdot \mathrm{noise}
+$$
+
+$$
+\mathrm{native\_increment} = \mathrm{spread\_rate}_N \cdot \mathrm{neighbourhood\_avg}(N) \cdot (1 - N) \cdot \mathrm{noise}
+$$
 Where `neighbourhood_avg` averages source cells within a circular radius, and `noise` is a uniform random factor (±15–40%) representing variable weather and animal disperser activity.
 
 ---
