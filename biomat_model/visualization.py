@@ -112,8 +112,6 @@ def plot_state(
     ax_map.set_xlim(-0.5, GRID_SIZE - 0.5)
     ax_map.set_ylim(-0.5, GRID_SIZE - 0.5)
 
-    inset = ax_map.inset_axes([0.76, 0.04, 0.20, 0.32])
-    _draw_chile_inset(inset)
 
     ax_cover = fig.add_subplot(gs[0, 1])
     ax_cover.plot(years, native_series, color="#1b7f3b", linewidth=2.5, label="Native cover")
@@ -185,9 +183,11 @@ def plot_trajectory_summary(stats: List[Dict[str, float]], scenario: ScenarioCon
 def plot_scenario_comparison(results: List[Dict[str, object]], output_path: Path) -> None:
     """Compare the three scenarios with year-30 maps and native-cover trajectories."""
 
-    fig = plt.figure(figsize=(16, 10), constrained_layout=True)
-    gs = fig.add_gridspec(2, 3, height_ratios=[1.15, 0.85])
+    n = len(results)
+    fig = plt.figure(figsize=(5 * n, 10), constrained_layout=True)
+    gs = fig.add_gridspec(2, n, height_ratios=[1.15, 0.85])
 
+    sim_years = len(results[0]["stats"]) - 1
     for idx, result in enumerate(results):
         scenario = result["scenario"]
         ax = fig.add_subplot(gs[0, idx])
@@ -195,12 +195,12 @@ def plot_scenario_comparison(results: List[Dict[str, object]], output_path: Path
         active_biomat = (result["final_biomat_age"] >= 0) & (result["final_biomat_age"] < 3)
         if np.any(active_biomat):
             ax.contour(active_biomat.astype(float), levels=[0.5], colors=["#3f88c5"], linewidths=0.7, origin="lower")
-        ax.set_title(f"{scenario.name}\nYear 30")
+        ax.set_title(f"{scenario.name}\nYear {sim_years}")
         ax.set_xticks([])
         ax.set_yticks([])
 
     ax_lines = fig.add_subplot(gs[1, :])
-    colors = ["#c44536", "#f0a202", "#1b7f3b"]
+    colors = ["#c44536", "#f0a202", "#1b7f3b", "#6a0dad", "#e87d2b"]
     for color, result in zip(colors, results):
         stats = result["stats"]
         years = [row["year"] for row in stats]
@@ -210,10 +210,10 @@ def plot_scenario_comparison(results: List[Dict[str, object]], output_path: Path
     ax_lines.set_title("Native Cover Trajectory Comparison")
     ax_lines.set_xlabel("Year")
     ax_lines.set_ylabel("Mean native cover (%)")
-    ax_lines.set_xlim(0, SIM_YEARS)
+    ax_lines.set_xlim(0, sim_years)
     ax_lines.set_ylim(0, 100)
     ax_lines.grid(alpha=0.25)
-    ax_lines.legend(frameon=False, ncol=3, loc="upper center")
+    ax_lines.legend(frameon=False, ncol=n, loc="upper center")
 
     fig.suptitle("Biomat Restoration Scenarios", fontsize=17, fontweight="bold")
     fig.savefig(output_path, dpi=180)

@@ -98,30 +98,48 @@ def deploy_biomats(
     year: int,
     scenario: ScenarioConfig,
 ) -> int:
-    """Deploy biomats in expanding rings around the center of the pilot site."""
+    """Deploy biomats according to the scenario's deployment mode.
 
-    quota = scenario.annual_deployment[year - 1]
-    if quota <= 0:
+    radial        — expand outward from each center (default behaviour).
+    encirclement  — form a hollow ring at ring_radius around the center,
+                    targeting cells closest to the ring circumference so the
+                    biomat encircles an invasive-dominated core.
+    """
+
+    quota_per_center = scenario.annual_deployment[year - 1]
+    if quota_per_center <= 0:
         return 0
 
-    rows, cols = native.shape
-    row_idx, col_idx = np.indices((rows, cols))
-    center = np.array([(rows - 1) / 2.0, (cols - 1) / 2.0])
-    distances = np.sqrt((row_idx - center[0]) ** 2 + (col_idx - center[1]) ** 2)
-
+    row_idx, col_idx = np.indices(native.shape)
     active = biomat_age >= 0
     priority = (~active) & ((invasive > native) | (native < ECOLOGY["native"]["maturity_threshold"]))
-    candidate_indices = np.flatnonzero(priority)
-    if candidate_indices.size == 0:
-        return 0
 
-    ordered = candidate_indices[np.argsort(distances.flat[candidate_indices])]
-    chosen = ordered[:quota]
+    total_deployed = 0
+    already_chosen = np.zeros(native.shape, dtype=bool)
 
-    invasive.flat[chosen] *= 1.0 - ECOLOGY["biomat"]["invasive_removal_fraction"]
-    native.flat[chosen] = np.maximum(native.flat[chosen], 0.12)
-    biomat_age.flat[chosen] = 0
-    return int(chosen.size)
+    for center_r, center_c in scenario.deployment_centers:
+        distances = np.sqrt((row_idx - center_r) ** 2 + (col_idx - center_c) ** 2)
+
+        if scenario.deployment_mode == "encirclement":
+            # Sort by |distance - ring_radius| so cells on the ring circumference
+            # are filled first, creating a hollow-circle encirclement pattern.
+            ring_dist = np.abs(distances - scenario.ring_radius)
+            sort_key = ring_dist
+        else:
+            sort_key = distances
+
+        candidate_indices = np.flatnonzero(priority & ~already_chosen)
+        if candidate_indices.size == 0:
+            continue
+        ordered = candidate_indices[np.argsort(sort_key.flat[candidate_indices])]
+        chosen = ordered[:quota_per_center]
+        already_chosen.flat[chosen] = True
+        invasive.flat[chosen] *= 1.0 - ECOLOGY["biomat"]["invasive_removal_fraction"]
+        native.flat[chosen] = np.maximum(native.flat[chosen], 0.12)
+        biomat_age.flat[chosen] = 0
+        total_deployed += int(chosen.size)
+
+    return total_deployed
 
 
 def update_dynamics(native: np.ndarray, invasive: np.ndarray, biomat_age: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -263,7 +281,8 @@ def run_simulation(
     frame_paths: List[Path] = []
     cumulative_biomats = 0
 
-    for year in range(0, SIM_YEARS + 1):
+    sim_years = len(scenario.annual_deployment)
+    for year in range(0, sim_years + 1):
         stats.append(_year_stats(year, native, invasive, biomat_age, cumulative_biomats))
         frame_path = frame_dir / f"{scenario.slug}_year_{year:02d}.png"
         plot_state(native, invasive, biomat_age, stats, scenario, year, frame_path)
@@ -271,13 +290,13 @@ def run_simulation(
 
         current = stats[-1]
         print(
-            f"[{scenario.name}] Year {year}/{SIM_YEARS} - "
+            f"[{scenario.name}] Year {year}/{sim_years} - "
             f"Native: {current['mean_native_cover'] * 100:5.1f}% | "
             f"Invasive: {current['mean_invasive_cover'] * 100:5.1f}% | "
             f"Restored cells: {current['cells_restored']:4d}"
         )
 
-        if year == SIM_YEARS:
+        if year == sim_years:
             break
 
         deployed = deploy_biomats(native, invasive, biomat_age, year + 1, scenario)
