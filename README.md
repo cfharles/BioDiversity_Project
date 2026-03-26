@@ -157,14 +157,20 @@ All parameters are set in `parameters.py`. Values were informed by reading the l
 
 ## Scenarios
 
-All intervention scenarios use a single constant deployment rate across the full 75-year simulation. Biomats deploy in expanding rings from the central pilot point (cell [50, 50]), prioritising cells where invasive cover exceeds native cover.
+All intervention scenarios use a single constant deployment rate across the full 75-year simulation, prioritising cells where invasive cover exceeds native cover. Three deployment modes are supported:
 
-| Scenario | Annual Rate | Total over 75 years |
-|---|---|---|
-| No Intervention | 0 ha/yr | — |
-| Light Deployment | 25 ha/yr | 1,875 ha |
-| Moderate Deployment | 75 ha/yr | 5,625 ha |
-| Aggressive Deployment | 125 ha/yr | 9,375 ha |
+- **Radial** — biomats expand outward from one or more center points
+- **Multi-point** — biomats deploy simultaneously from five distributed centers across the grid
+- **Encirclement** — biomats form a hollow ring at a fixed radius around a center point, surrounding an invasive-dominated core and squeezing inward over time
+
+| Scenario | Annual Rate | Total over 75 years | Mode |
+|---|---|---|---|
+| No Intervention | 0 ha/yr | — | — |
+| Light Deployment | 25 ha/yr | 1,875 ha | Radial (1 center) |
+| Moderate Deployment | 75 ha/yr | 5,625 ha | Radial (1 center) |
+| Aggressive Deployment | 125 ha/yr | 9,375 ha | Radial (1 center) |
+| Multi-Point Deployment | 25 ha/yr per center (125 ha/yr total) | 9,375 ha | Radial (5 centers) |
+| Encirclement Ring | 75 ha/yr | 5,625 ha | Hollow circle, radius 28 cells (~175 ha enclosed) |
 
 ---
 
@@ -182,7 +188,7 @@ From the project root directory:
 python3 -m biomat_model.run_simulation
 ```
 
-This runs the 75-year simulation across all four scenarios.
+This runs the 75-year simulation across all six scenarios.
 
 Dependencies: `numpy`, `matplotlib`, `imageio`. Install with:
 
